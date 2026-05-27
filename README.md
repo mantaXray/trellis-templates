@@ -8,37 +8,63 @@
 
 ### 第 1 步：跑 trellis init，同时拉 spec + bootstrap skill
 
+按你使用的 AI 工具组合选一行命令：
+
+#### 双轨：Claude Code + Codex（推荐 —— 协同分工见 §claude-codex-collaboration）
+
 ```bash
-# 进入新项目目录
 cd /path/to/new-mcu-project
 
-# 一行命令拉两个模板
 trellis init -y --claude --codex \
   -t mcu-stm32-base \
   -t mcu-bootstrap \
   -r http://<origin URL>/Xray/trellis-mcu-templates
 ```
 
-完成后：
+#### 只用 Codex
+
+```bash
+cd /path/to/new-mcu-project
+
+trellis init -y --codex \
+  -t mcu-stm32-base \
+  -t mcu-bootstrap \
+  -r http://<origin URL>/Xray/trellis-mcu-templates
+```
+
+#### 只用 Claude Code
+
+```bash
+cd /path/to/new-mcu-project
+
+trellis init -y --claude \
+  -t mcu-stm32-base \
+  -t mcu-bootstrap \
+  -r http://<origin URL>/Xray/trellis-mcu-templates
+```
+
+完成后会出现：
 
 ```
-.trellis/spec/                    ← 来自 mcu-stm32-base (type:spec)
+.trellis/spec/                              ← 来自 mcu-stm32-base (type:spec)，平台无关
 ├── guides/
-│   ├── claude-codex-collaboration.md
+│   ├── claude-codex-collaboration.md       # 双轨协同规则 + Codex-only 模式说明
 │   └── bootstrap-checklist.md
 └── firmware/
     ├── version-control.md
     └── coding-standard.md
 
-.claude/skills/mcu-bootstrap/     ← 来自 mcu-bootstrap (type:skill)
-└── SKILL.md                       ← 自动化引导脚本
+.claude/skills/mcu-bootstrap/SKILL.md       ← 装了 --claude 时
+.codex/skills/mcu-bootstrap/SKILL.md        ← 装了 --codex 时
 ```
 
-### 第 2 步：在 Claude Code（或 Codex）里跑一次 bootstrap
+### 第 2 步：在你的 AI 工具里触发 mcu-bootstrap skill
 
-```
-/mcu-bootstrap
-```
+在你的 AI 工具会话里发起 skill 调用：
+
+- **Claude Code**：输入 `/mcu-bootstrap`
+- **Codex CLI**：根据 codex 的 skill 调用约定（一般是显式说 "用 mcu-bootstrap skill" 或同名 prompt）
+- **任何 AI 工具**：你也可以直接说"跑一下 mcu-bootstrap" / "执行 MCU 项目引导"，AI 检测到本地 skill 后会自动调用
 
 skill 会：
 

@@ -13,18 +13,22 @@
 ```markdown
 ---
 
-## 本项目专用：Claude / Codex 协同硬规则
+## 本项目专用：AI 助手协同规则
 
-本项目采用 **Claude（task / 文档侧）+ Codex（code 侧）双 agent 协同**，职责边界严格：
+本项目按 **任务相位 → 代码相位** 严格分离工作：
 
-- **Claude** 只负责：任务管理（PRD、brainstorm、Trellis 任务状态切换）、文档维护（`doc/`、`.trellis/spec/`、`.trellis/tasks/`）
-- **Codex** 只负责：C/H 代码实现、编译验证（`iarbuild`）、`git commit` 代码改动
+- **任务相位（Trellis `planning` 状态）**：需求收敛、brainstorm、PRD 编写、`doc/` 与 `.trellis/spec/` 文档维护。**不允许修改 C/H 代码**。
+- **代码相位（Trellis `in_progress` 状态）**：C/H 代码实现、编译验证（`iarbuild` 主流，少数 legacy 项目用 `make`）、`git commit` 代码改动。
+- 相位切换由 `python ./.trellis/scripts/task.py start <task-dir>` 等命令驱动。
 
-**Claude 严禁修改任何 `.c` / `.h` 文件**（即使一行）。即使 PRD 已经写完，Claude 也不应自行越界改代码 —— 代码部分等 Codex 接手。
+实际谁来做事，按本项目使用的 AI 工具组合决定：
 
-唯一例外：用户在**当前消息**里明确说出 "你直接改" / "别派 sub-agent" / "main session 写就行" / "do it inline" / "no sub-agent" 等短语时，Claude 可以临时改一次。
+- **双轨（Claude + Codex）**：Claude 做任务相位，Codex 做代码相位
+- **Codex-only**：同一个 Codex agent 在两个相位间切换
+- **Claude-only**：同一个 Claude agent 在两个相位间切换
 
-完整规则与流程见：[`.trellis/spec/guides/claude-codex-collaboration.md`](.trellis/spec/guides/claude-codex-collaboration.md)
+完整规则、相位禁止清单、override 例外、Trellis Phase 对照见：
+[`.trellis/spec/guides/claude-codex-collaboration.md`](.trellis/spec/guides/claude-codex-collaboration.md)
 ```
 
 > 放在 `TRELLIS:END` 之后是为了避免被未来的 `trellis update` 覆盖。

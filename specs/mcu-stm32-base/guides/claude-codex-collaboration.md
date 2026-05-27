@@ -1,6 +1,41 @@
 # Claude / Codex 协同工作规则
 
-> 本项目采用 **Claude（task-side）+ Codex（code-side）双 agent 协同**。本文档定义两个 agent 的职责边界、交接物、以及禁止越界的硬规则。**任何 AI 助手开始工作前必读**。
+> 本文档定义 AI 助手在本项目中的职责边界、交接物、和禁止越界的硬规则。**任何 AI 助手开始工作前必读**。
+>
+> 默认模型是 **Claude（task-side）+ Codex（code-side）双 agent 协同**；只用 Codex 或只用 Claude 的开发者请先阅读 §0 选择适用模式。
+
+---
+
+## 0. 适用模式（必先确认）
+
+公司开发者使用 AI 工具的组合不一样，本文档按以下三种模式分别适用：
+
+### 模式 A：Claude + Codex 双轨（推荐 —— 文档完整描述的模式）
+
+- Claude 负责 task / docs 侧（PRD、brainstorm、Trellis 任务管理、文档维护）
+- Codex 负责 code 侧（C/H 代码实现、编译验证、commit）
+- 两个 agent 严格分工，**Claude 不写代码，Codex 不写 PRD**
+- §1~§7 所有规则**直接适用**
+
+### 模式 B：Codex-only（只用 Codex）
+
+- 同一个 Codex agent **既做 task 又做 code**
+- 但**仍然保留"任务相位 / 代码相位"的概念区分**：
+  - 当用户跟 Codex 讨论需求、brainstorm、写 PRD 时，Codex 处于**任务相位**（按 Claude 的角色行事）
+  - 当用户让 Codex 改代码时，Codex 处于**代码相位**（按 Codex 的角色行事）
+- 切换相位的信号是 **Trellis 任务状态**：`planning` 状态下为任务相位、`in_progress` 状态下为代码相位
+- 这种模式下：
+  - 单 agent 没有"越界写代码"的硬禁止（同一个 agent 哪个相位都能做）
+  - **但仍然禁止在 planning 阶段跳过 PRD 直接改代码** —— 必须先 brainstorm 收敛
+  - PRD / 优化方案 / 设计文档**仍然是必要的交付物**，不能图省事跳过
+- §2 工作流交接（Phase 1 → 2 → 3）仍然遵守，只是交接对象从"另一个 agent"变成"同一个 agent 的另一个相位"
+- §3 硬禁止清单按角色读 —— task 相位时不可以"凭自己理解直接改代码"
+
+### 模式 C：Claude-only（只用 Claude）
+
+- 罕见，但部分场景下可能（如纯算法 / 设计型任务，代码改动量极小）
+- 处理方式同模式 B —— 同一个 Claude agent 既做 task 相位又做 code 相位
+- 编译验证可能需要用户手动跑或 Claude 通过 Bash 工具跑（Claude 一般避免，但单 agent 时这是允许的）
 
 ---
 
@@ -58,7 +93,10 @@ Claude 收到反馈后：
 
 ## 3. 硬禁止清单
 
-### 3.1 Claude 严禁
+> 在**双轨模式 A** 下，下列禁止规则按 agent 直接套用。
+> 在**Codex-only 模式 B** / **Claude-only 模式 C** 下，规则**按相位读取** —— "Claude 严禁"列对应任务相位（planning），"Codex 严禁"列对应代码相位（in_progress）；同一 agent 在两个相位之间切换时严格遵守对应一侧。
+
+### 3.1 Claude 严禁 / 任务相位严禁
 
 | ❌ 禁止行为 | 为什么 |
 |---|---|
@@ -69,12 +107,12 @@ Claude 收到反馈后：
 | 在 PRD / 方案文档里嵌入大段可直接 copy-paste 的 C 代码片段 | 这是 Codex 的工作；Claude 应描述设计意图，不应预写实现 |
 | `git commit` C/H 代码改动 | commit 归 Codex |
 
-### 3.2 Codex 严禁
+### 3.2 Codex 严禁 / 代码相位严禁
 
 | ❌ 禁止行为 | 为什么 |
 |---|---|
 | 在没有 PRD 的情况下凭"自己理解"开始改代码 | 流程绕过 brainstorm，会偏离用户意图 |
-| 改 PRD 文件 | PRD 是 Claude / 用户产物；Codex 发现 PRD 有问题应反馈给 Claude，不应自己修 |
+| 改 PRD 文件 | PRD 是任务相位 / Claude / 用户产物；代码相位发现 PRD 有问题应反馈给任务相位 / Claude，不应自己修 |
 | 实现 PRD 明确标记为 "Out of Scope" 的功能 | 范围蔓延 |
 | 跳过 check 阶段直接 commit | 流程不完整 |
 
@@ -82,7 +120,7 @@ Claude 收到反馈后：
 
 ## 4. 例外条款
 
-### 4.1 用户显式 inline 改动
+### 4.1 用户显式 inline 改动（仅适用模式 A 双轨）
 
 如果用户在**当前消息**里明确说出以下任一短语，**Claude 可以临时跨界改代码一次**（仅当前轮）：
 
@@ -90,6 +128,8 @@ Claude 收到反馈后：
 - `"你直接改"` / `"别派 sub-agent"` / `"main session 写就行"` / `"不用 sub-agent"`
 
 未见用户说出上述短语时，**严禁自行越界**。
+
+> **模式 B Codex-only / 模式 C Claude-only 下**本条不适用 —— 单 agent 下不存在 sub-agent 派发概念，agent 自身按当前相位行事即可，相位切换由 Trellis 任务状态驱动。
 
 ### 4.2 紧急小修
 
@@ -111,25 +151,27 @@ Claude 收到反馈后：
 
 ## 6. Trellis 阶段对照
 
+> 下面用括号标注**双轨模式 A** 时的 agent 分工；**模式 B/C** 单 agent 时换成同一 agent 在不同相位行事，括号忽略即可。
+
 ```
-Phase 1 (Plan)          Claude 主导
+Phase 1 (Plan)          任务相位 [模式 A: Claude 主导]
   ├─ task.py create
   ├─ trellis-brainstorm
   ├─ prd.md
   ├─ implement.jsonl / check.jsonl
-  └─ task.py start                  ← Claude 在这里收手
+  └─ task.py start                  ← 任务相位在这里收手
 
-Phase 2 (Execute)       Codex 主导
+Phase 2 (Execute)       代码相位 [模式 A: Codex 主导]
   ├─ 读 PRD + 设计文档 + spec
   ├─ 改代码
   ├─ 编译验证（iarbuild 主流，少数 legacy 项目用 make）
   ├─ trellis-check
-  └─ 反馈给 Claude
+  └─ 反馈给任务相位
 
-Phase 3 (Finish)        Claude + Codex 接力
-  ├─ Codex: git commit 代码改动
-  ├─ Claude: 更新 doc/软件设计说明_*.md 到与新代码一致
-  ├─ Claude: 可能通过 trellis-update-spec 沉淀新约定
+Phase 3 (Finish)        相位接力 [模式 A: Claude + Codex 接力]
+  ├─ 代码相位: git commit 代码改动
+  ├─ 任务相位: 更新 doc/软件设计说明_*.md 到与新代码一致
+  ├─ 任务相位: 可能通过 trellis-update-spec 沉淀新约定
   └─ /trellis:finish-work
 ```
 
@@ -137,8 +179,8 @@ Phase 3 (Finish)        Claude + Codex 接力
 
 ## 7. 如何让用户判断当前是哪个阶段
 
-- **任务状态 `planning`** → Phase 1，Claude 当家
-- **任务状态 `in_progress`** → Phase 2，Codex 当家（Claude 此时**只读不写代码**）
-- **任务状态 `complete` 前的收尾** → Phase 3，Claude 更新文档 + spec、Codex 收尾 commit
+- **任务状态 `planning`** → Phase 1，任务相位（模式 A: Claude 当家；模式 B/C: 同一 agent 按任务相位行事）
+- **任务状态 `in_progress`** → Phase 2，代码相位（模式 A: Codex 当家，Claude 只读不写代码；模式 B/C: 同一 agent 按代码相位行事）
+- **任务状态 `complete` 前的收尾** → Phase 3，相位接力（模式 A: Claude 更新文档 + spec、Codex 收尾 commit；模式 B/C: 同一 agent 完成两件事）
 
 用 `python ./.trellis/scripts/task.py current` 或 `task.py list` 随时查看。
