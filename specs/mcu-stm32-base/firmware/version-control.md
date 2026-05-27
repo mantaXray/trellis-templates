@@ -1,6 +1,8 @@
 # Version Control And Submission Rules
 
-> 公司 MCU 固件项目使用 **Git（个人 / 团队副本）+ SVN（公司主线）** 双轨管理。本文档规定两条轨道各自的范围、提交格式、版本号管理、以及触发词约定。**新项目落地时按需将占位符替换为本项目具体信息**。
+> 公司 MCU 固件项目使用 **Git（个人 / 团队副本）+ SVN（公司主线）** 双轨管理。本文档规定两条轨道各自的范围、提交格式、版本号管理、以及触发词约定。
+>
+> **主流工具链：IAR Embedded Workbench for Arm**（项目目录 `EWARM/`）。STM32CubeIDE+GCC 是少数项目的例外，相关差异在条目里单独说明。
 
 ---
 
@@ -10,14 +12,16 @@
 
 | 路径 | Git | SVN | 说明 |
 |---|---|---|---|
-| `Core/` `User/` `Drivers/` `Middlewares/` 等源码 | ✅ | ✅ | 双轨同步跟踪 |
-| `.cproject` `.project` `.settings/` `.mxproject` `.ioc` `*.ld` `*.code-workspace` `*.ewp` `*.eww` | ✅ | ✅ | IDE / 链接器 / 工程配置 |
-| `Bin/*.bin` `Bin/*.hex` 已发布版本 | ✅ | ✅ | 双轨保留发布产物 |
+| `Core/` `User/App/` `User/Protocol/` `SYSTEM/` `BSP/` `Drivers/` `Middlewares/` `lvgl_v9.4/` `FATFS/` 等源码 | ✅ | ✅ | 双轨同步跟踪 |
+| `EWARM/*.ewp` `EWARM/*.ewd` `EWARM/*.ewt` `EWARM/*.eww` `*.icf` startup 文件 `.ioc` | ✅ | ✅ | IAR 工程 + CubeMX 模型 |
+| `.cproject` `.project` `.settings/` `.mxproject` `*.code-workspace` *（少数项目）* | ✅ | ✅ | STM32CubeIDE 工程（仅例外项目使用） |
+| `Bin/*.bin` `Bin/*.hex` `Bin/*.out` 已发布版本 | ✅ | ✅ | 双轨保留发布产物 |
 | `.agents/` `.claude/` `.codex/` `.trellis/` | ✅ | ❌ | AI / Trellis 配置，**仅 Git**，SVN 不上传 |
 | `AGENTS.md` `.gitignore` `.git/` | ✅ | ❌ | Git 工具链配置 |
 | `doc/` 项目文档（设计说明、优化方案等） | ✅ | ❌ | 通用约定：只上 Git，不上 SVN |
-| `ref_doc/` 参考资料（PDF、docx、第三方文档） | ❌ | ❌ | 本地引用，两侧都不上 |
-| `Debug/` `Release/` `*.o` `*.d` `*.su` `*.elf` `*.map` `*.list` 构建产物 | ❌ | ❌ | 由 IDE 重新生成 |
+| `ref_doc/` / `ref_docs/` 参考资料 | ❌ | ❌ | 本地引用，两侧都不上 |
+| `EWARM/*/Obj/` `EWARM/*/BrowseInfo/` `EWARM/*/Exe/` `EWARM/*/List/` `.pbi/.pbw/.pbd/.browse` IAR 中间产物 | ❌ | ❌ | IAR 重新生成 |
+| `Debug/` `Release/` `*.o` `*.d` `*.su` `*.elf` `*.map` `*.list` *（STM32CubeIDE+GCC 项目）* | ❌ | ❌ | GCC 重新生成 |
 | `.qoder/` `.lingma/` `.uv-cache/` `tmp/` `~$*` 本地噪音 | ❌ | ❌ | 工具临时状态 / Office 锁 |
 | `.trellis/workspace/*/journal-*.md` 个人 journal | ❌ | ❌ | 单开发者本地状态 |
 
@@ -39,15 +43,15 @@
 
 ### 2.1 版本宏定义
 
-新项目应当在 `User/App/Inc/define.h`（或公司项目惯例的等价位置）定义以下版本宏：
+新项目应当在 `User/App/System/define.h`（IAR 主流项目惯例）或 `User/App/Inc/define.h`（例外项目惯例）定义以下版本宏：
 
 | 宏 | 类型 | 含义 | 何时 bump |
 |---|---|---|---|
-| `VERSION` | 字符串 `"vX.Y.Z"` | 整体固件版本号 | **每次改固件行为的 commit** |
-| `VERSION_DATE` | 字符串 `"YYYYMMDD"` | 当前 VERSION 的发布日期 | 跟 VERSION 同步 bump |
+| `SOFTWARE_VERSION` / `VERSION` | 字符串 `"vX.YY.ZZ"` | 整体固件版本号 | **每次改固件行为的 commit** |
+| `SOFTWARE_VERSION_DATE` / `VERSION_DATE` | 字符串 `"YYYYMMDD"` | 当前版本的发布日期 | 跟版本号同步 bump |
 | `ALGO_VERSION` *（可选）* | 字符串 `"vX.Y"` | 算法核心版本 | **仅算法核心变更**（拟合公式、阈值算法、核心处理算法） |
 
-> 项目落地时按实际情况调整命名（参考项目用 `SOFTWARE_VERSION` / `SOFTWARE_VERSION_DATE`，部分项目使用 `VERSION` / `VERSION_DATE`，**全项目内保持一致即可**）。
+> 命名按项目惯例：IAR 主流项目用 `SOFTWARE_VERSION` / `SOFTWARE_VERSION_DATE`，部分 STM32CubeIDE 项目用 `VERSION` / `VERSION_DATE`。**全项目内保持一致即可**，不要混用。
 
 ### 2.2 版本号语义层次
 
@@ -60,7 +64,7 @@
 如果一天里有多次"改固件行为"的 commit：
 
 - 日期戳保持当天日期不变
-- 整体版本递增小版本：`v1.0.17` → `v1.0.18` → `v1.0.19`
+- 整体版本递增小版本：`v1.00.06` → `v1.00.07` → `v1.00.08`（IAR 主流项目惯用两位小数）
 
 ### 2.4 仅文档 / Trellis / 重构（不改行为）的 commit
 
@@ -75,7 +79,7 @@
 文件头一般规则：
 - 每个源文件最多一天一个 `Changelog` 条目
 - 同一天多次改：合并到当天那条 Changelog 下
-- 文件头 `Version`：每天至多 bump 一次（与全项目 `VERSION` 是不同概念）
+- 文件头 `Version`：每天至多 bump 一次（与全项目版本宏是不同概念）
 
 ---
 
@@ -84,24 +88,24 @@
 ### 3.1 标题格式（Conventional Commits）
 
 ```text
-<type>(<scope>): <短描述> [vX.Y.Z]
+<type>(<scope>): <短描述> [vX.YY.ZZ]
 
 例：
-feat: add work-state machine v1.0.18
-fix(color): clear stale state on idle transition v1.0.19
+feat: add app tasks and thin host protocol v1.00.02
+fix(uart): handle fragmented DMA frames v1.00.07
 chore: gitignore Office lock files
 docs: update design baseline doc
 refactor: extract distance helper （行为不变）
 ```
 
-`type` 取值参考：`feat` `fix` `refactor` `chore` `docs` `test` `perf` `build` `style`
+`type` 取值：`feat` `fix` `refactor` `chore` `docs` `test` `perf` `build` `style`
 
-`scope` 可选，常用按模块：`color` `distance` `report` `bsp` `bootloader` `flash` `trellis` `doc`
+`scope` 可选，按模块：`uart` `dma` `i2c` `lvgl` `fatfs` `bsp` `bootloader` `flash` `trellis` `doc`
 
 ### 3.2 正文模板（双语结构化 —— 公司标准）
 
 ```text
-版本号：v1.0.18
+版本号：v1.00.02
 
 摘要
 - <中文摘要 1>
@@ -112,20 +116,44 @@ refactor: extract distance helper （行为不变）
 - <中文关键变更 2>
 
 验证
-- <编译命令>：PASS / 编译输出无新增 warning
+- iarbuild <项目>.ewp -build Debug：PASS / 编译输出无新增 warning
 - <其他验证项>：<PASS / 阻塞说明>
 
 English
 
-Version: v1.0.18
+Version: v1.00.02
 
 Summary
 - <English summary 1>
 - <English summary 2>
 
 Verification
-- <build command>: PASS
+- iarbuild <project>.ewp -build Debug: PASS
 - <other check>: <PASS / blocked note>
+```
+
+#### IAR 编译验证命令参考
+
+```bash
+# 在 EWARM/ 目录下，命令行调用 IarBuild
+iarbuild <项目>.ewp -build Debug    # 完整 build
+iarbuild <项目>.ewp -clean Debug    # 清理
+iarbuild <项目>.ewp -make Debug     # 增量编译
+
+# 如果命令行 iarbuild 不可用，退而求其次：
+# - host-side parser/protocol focused tests
+# - PowerShell 检查脚本
+# - grep / git diff --check
+# - .ewp 文件路径成员校验（确认新增 .c 被加入工程）
+```
+
+#### STM32CubeIDE+GCC 编译验证命令参考（少数项目）
+
+```bash
+# 在 Debug/ 目录下
+export PATH="<stm32cube gcc + make plugin path>:$PATH"
+make -j8 all                          # 完整 build
+make clean                            # 清理
 ```
 
 #### 注意事项
@@ -153,10 +181,10 @@ Verification
 
    ```bash
    # SVN 端基线
-   svn cat -r HEAD <定义版本宏的路径> | grep -E "VERSION|VERSION_DATE"
+   svn cat -r HEAD User/App/System/define.h | grep -E "SOFTWARE_VERSION|VERSION_DATE"
 
    # 本地基线
-   grep -E "VERSION|VERSION_DATE" <定义版本宏的路径>
+   grep -E "SOFTWARE_VERSION|VERSION_DATE" User/App/System/define.h
 
    # Git 端基线（如果有 git tag 对应每个 SVN release）
    git log --oneline --reverse <svn-baseline>..HEAD
@@ -164,21 +192,23 @@ Verification
    ```
 
 2. **SVN log 要写完整版本跨度**（不是只写最近一次 commit）：
-   - 若 SVN 落后到 v1.0.13，本地已到 v1.0.18，SVN log 必须涵盖 `v1.0.13 → v1.0.18` 全部行为变更
+   - 若 SVN 落后到 v1.00.13，本地已到 v1.00.18，SVN log 必须涵盖 `v1.00.13 → v1.00.18` 全部行为变更
    - 中间各小版本的关键变更要逐条列出
 
 3. **检查 svn:add 是否齐全**：
 
    ```bash
-   svn status  # 关注 ? 标记的新源文件
+   svn status   # 关注 ? 标记的新源文件
    ```
 
-   新增的源文件、IDE 工程配置文件需要 `svn add` 后再 commit。**不要**`svn add` AI/Trellis 路径。
+   新增的 `.c` `.h` `.ewp` `.icf` 等源文件 / 工程文件需要 `svn add` 后再 commit。**不要**`svn add` AI/Trellis 路径。
+
+4. **IAR `.ewp` 同步**：新增的 `.c` 或 include 路径需要在 `EWARM/<项目>.ewp` 里也加上，**SVN 提交时确保 `.ewp` 一起带**。
 
 ### 4.3 SVN log 模板（**中文 + 版本前缀**，不含英文）
 
 ```text
-版本：<项目代号>:v1.0.18_20260527
+版本：<项目代号>:v1.00.18_20260527
 简述：xxx 功能完成 / xxx 问题修复
 1. 增加 xxx 模块
 2. 修复 xxx bug
@@ -186,7 +216,7 @@ Verification
 ```
 
 - **不要**包含 `Verification`、`English`、`Summary`、`Key Changes` 等 Git 专用字段
-- `版本：` 行必须含产品名前缀（`<项目代号>` 替换成本项目 SVN 标识，如 `BW-STS130_S9706` / `BW2024-XAYF-023_MCU-MAIN`），格式严格为 `<项目代号>:vX.Y.Z_YYYYMMDD`
+- `版本：` 行必须含产品名前缀（`<项目代号>` 替换成本项目 SVN 标识，如 `BW2024-XAYF-023_MCU-MAIN` / `BW-STS130_S9706`），格式严格为 `<项目代号>:vX.YY.ZZ_YYYYMMDD`
 - `简述：` 一句话整体描述
 - 编号变更项使用阿拉伯数字 + 中文
 
@@ -207,7 +237,7 @@ Verification
 
 ### 4.5 SVN 不应包含的路径（再次强调）
 
-`.agents/` `.claude/` `.codex/` `.trellis/` `AGENTS.md` `.gitignore` `.git/` `doc/` `ref_doc/` `Debug/` `Release/` `tmp/` `*.swp` `Thumbs.db` —— 这些都应在 `svn:ignore` 属性里。
+`.agents/` `.claude/` `.codex/` `.trellis/` `AGENTS.md` `.gitignore` `.git/` `doc/` `ref_doc/` / `ref_docs/` `EWARM/*/Obj/` `EWARM/*/Exe/` `EWARM/*/List/` `EWARM/*/BrowseInfo/` `Debug/` `Release/` `tmp/` `*.swp` `Thumbs.db` —— 这些都应在 `svn:ignore` 属性里。
 
 例外：用户明确要求提交某 AI 配置时（如更新 Trellis spec 后需要同步给同事 SVN 副本），可以临时 `svn add` 该路径 + 显式提交 + commit 消息里说明。
 

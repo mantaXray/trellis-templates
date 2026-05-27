@@ -1,6 +1,8 @@
 # Firmware Coding Standard
 
-> 公司 MCU 固件 C/C++ 编码规范（STM32 / GD32 通用，IAR + STM32CubeIDE+GCC 通用）。
+> 公司 MCU 固件 C/C++ 编码规范。
+>
+> **主流工具链：IAR Embedded Workbench for Arm**（公司约 90% MCU 项目）。少数 legacy STM32CubeIDE+GCC 项目共用本规范，工具链差异在相关条目里单独说明。
 
 ## 1. Source Standard
 
@@ -117,9 +119,9 @@
 ### 6.3 DMA 缓冲
 
 - DMA 面对的 buffer 必须记录：
-  - 内存放置（DTCM / D2 / SRAM4 / AXI 等，STM32H7 类高端 MCU）
+  - 内存放置（DTCM / D2 / SRAM4 / AXI 等，STM32H7 类高端 MCU；STM32F1 类低端 MCU 单一 SRAM 无此约束）
   - 对齐要求
-  - cache clean / invalidate 规则（STM32H7 类含 cache）
+  - cache clean / invalidate 规则（STM32H7 类含 cache；STM32F1 无 cache）
   - producer / consumer 所有权
 
 ### 6.4 中断 / FreeRTOS 边界

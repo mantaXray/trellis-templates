@@ -1,6 +1,8 @@
 # trellis-mcu-templates
 
 > 合鲸科技 MCU 固件项目的 Trellis 通用模板 registry。给 `trellis init --template ... --registry ...` 使用。
+>
+> **主流工具链**：IAR Embedded Workbench for Arm（公司约 90% MCU 项目）。少数 STM32CubeIDE+GCC legacy 项目共用本模板，spec 内对工具链差异有明确标注。
 
 ## 使用方法
 

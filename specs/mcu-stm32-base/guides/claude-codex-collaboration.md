@@ -64,7 +64,7 @@ Claude 收到反馈后：
 |---|---|
 | 修改任何 `.c` / `.h` 文件 | 越界；Codex 是 code-side owner |
 | 修改 `Drivers/` `Middlewares/` 等 vendor / 生成代码 | 同上 |
-| 执行 `make` / `iarbuild` 等编译命令 | 编译验证归 Codex；Claude 的编译输出会污染上下文 |
+| 执行 `iarbuild` / `make` 等编译命令 | 编译验证归 Codex；Claude 的编译输出会污染上下文（公司主流 IAR，少数 legacy 项目用 make） |
 | 在 brainstorm 阶段就跳到"我来写代码" | 违反协同流程 |
 | 在 PRD / 方案文档里嵌入大段可直接 copy-paste 的 C 代码片段 | 这是 Codex 的工作；Claude 应描述设计意图，不应预写实现 |
 | `git commit` C/H 代码改动 | commit 归 Codex |
@@ -122,7 +122,7 @@ Phase 1 (Plan)          Claude 主导
 Phase 2 (Execute)       Codex 主导
   ├─ 读 PRD + 设计文档 + spec
   ├─ 改代码
-  ├─ 编译验证（make / iarbuild）
+  ├─ 编译验证（iarbuild 主流，少数 legacy 项目用 make）
   ├─ trellis-check
   └─ 反馈给 Claude
 
