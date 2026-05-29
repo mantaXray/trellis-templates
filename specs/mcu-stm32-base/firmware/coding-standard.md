@@ -1,12 +1,12 @@
 # Firmware Coding Standard
 
-> 公司 MCU 固件 C/C++ 编码规范。
+> MCU 固件 C/C++ 通用编码规范。
 >
-> **主流工具链：IAR Embedded Workbench for Arm**（公司约 90% MCU 项目）。少数 legacy STM32CubeIDE+GCC 项目共用本规范，工具链差异在相关条目里单独说明。
+> 按项目实际工具链使用。IAR Embedded Workbench for Arm、STM32CubeIDE+GCC 或其他构建方式的差异在相关条目里单独说明。
 
 ## 1. Source Standard
 
-新写或改动 C/C++ 代码时，遵循公司纸面规范 `ref_docs/C&C++语言编码规范v1.0.txt`（或同名 docx/pdf 作为 fallback 副本）。
+新写或改动 C/C++ 代码时，遵循项目纸面规范（例如 `ref_docs/C&C++语言编码规范v1.0.txt`，或同名 docx/pdf 作为 fallback 副本）。
 
 因为 `ref_docs/` 是本地引用，下面把核心规则提炼出来作为 Trellis 可见的稳定基线。
 
@@ -23,11 +23,11 @@
 
 ### 3.1 文件头
 
-新增或修改的源文件必须用公司文件头模板。版权年份用当前项目工作年（不一定是本年自然年，**遵循 `User` 给出的项目时间基准**）：
+新增或修改的源文件必须用项目文件头模板。版权年份用当前项目工作年（不一定是本年自然年，**遵循 `User` 给出的项目时间基准**）：
 
 ```c
 /*
- * Copyright (c) 2026,北京合鲸科技发展有限公司
+ * Copyright (c) {{PROJECT_YEAR}}, {{ORGANIZATION}}
  * All rights reserved
  *
  * Filename：module.c
@@ -59,6 +59,14 @@
 - **不写**重述简单赋值的注释
 - **代码注释** 可以用逗号，但**不应**以中英文句号结尾
 
+### 3.4 生成代码与文档同步
+
+- CubeMX / GUI 工具管理的文件只在 `USER CODE BEGIN/END` 区块内放自定义逻辑，除非任务明确包含 `.ioc` 或生成模型变更
+- 生成代码 diff 应保持最小；如果必须改生成区，PRD 或 commit message 里说明原因和再生成风险
+- 代码行为、路径、架构、构建命令、版本规则或可复发坑点变化时，同步更新 Markdown 设计文档、Trellis spec 或源代码注释
+- `ref_docs/` / `ref_doc/` 是本地参考资料；可复用规则应提炼到 spec、设计文档、源码注释或测试中，不提交原始私有资料
+- 文件头 `Version` / `Changelog` 是文件级记录，不等同于 `SOFTWARE_VERSION` / `VERSION` 固件发布版本；发布版本规则见 [`version-control.md`](version-control.md)
+
 ## 4. Formatting And APIs
 
 ### 4.1 基础格式
@@ -86,7 +94,7 @@
 - 输入型指针参数加 `const`
 - 函数入口校验输入参数
 - **不要**返回栈存储指针
-- BSP / 协议代码**避免动态分配**，除非该模块已经依赖（如 LVGL）
+- BSP / 协议代码**避免动态分配**，除非该模块或中间件已经有明确依赖
 
 ## 5. Expressions And Control Flow
 
@@ -148,3 +156,4 @@
 
 - 任务实施过程中如发现本规范与项目实际有冲突或需补充，**通过 `trellis-update-spec` 沉淀到项目 spec**，而不是单方面违反
 - 项目 spec 优先级高于本通用 spec（项目 spec 是特化，本规范是通用基线）
+- 可复发的实现坑点先查阅并更新 [`pitfalls.md`](pitfalls.md)；跨项目可复用的 lesson 按模板仓库 `docs/pitfall-feedback-loop.md` 的规则反哺到上游模板（项目本地的 spec 通常不存放反哺流程文档）

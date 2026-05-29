@@ -1,8 +1,8 @@
 # Version Control And Submission Rules
 
-> 公司 MCU 固件项目使用 **Git（个人 / 团队副本）+ SVN（公司主线）** 双轨管理。本文档规定两条轨道各自的范围、提交格式、版本号管理、以及触发词约定。
+> MCU 固件项目可使用 **Git（个人 / 团队副本）+ SVN（团队或项目主线）** 双轨管理。本文档规定两条轨道各自的范围、提交格式、版本号管理、以及触发词约定。
 >
-> **主流工具链：IAR Embedded Workbench for Arm**（项目目录 `EWARM/`）。STM32CubeIDE+GCC 是少数项目的例外，相关差异在条目里单独说明。
+> 按项目实际工具链使用。IAR Embedded Workbench for Arm（常见目录 `EWARM/`）、STM32CubeIDE+GCC 或其他构建方式的差异在条目里单独说明。
 
 ---
 
@@ -12,30 +12,31 @@
 
 | 路径 | Git | SVN | 说明 |
 |---|---|---|---|
-| `Core/` `User/App/` `User/Protocol/` `SYSTEM/` `BSP/` `Drivers/` `Middlewares/` `lvgl_v9.4/` `FATFS/` 等源码 | ✅ | ✅ | 双轨同步跟踪 |
+| `Core/` `User/App/` `User/Protocol/` `SYSTEM/` `BSP/` `Drivers/` `Middlewares/` 以及项目实际使用的 UI / storage 中间件源码 | ✅ | ✅ | 双轨同步跟踪 |
 | `EWARM/*.ewp` `EWARM/*.ewd` `EWARM/*.ewt` `EWARM/*.eww` `*.icf` startup 文件 `.ioc` | ✅ | ✅ | IAR 工程 + CubeMX 模型 |
 | `.cproject` `.project` `.settings/` `.mxproject` `*.code-workspace` *（少数项目）* | ✅ | ✅ | STM32CubeIDE 工程（仅例外项目使用） |
 | `Bin/*.bin` `Bin/*.hex` `Bin/*.out` 已发布版本 | ✅ | ✅ | 双轨保留发布产物 |
-| `.agents/` `.claude/` `.codex/` `.trellis/` | ✅ | ❌ | AI / Trellis 配置，**仅 Git**，SVN 不上传 |
+| `.agents/` `.claude/` `.codex/` `.trellis/spec/` `.trellis/tasks/` | ✅ | ❌ | AI / Trellis 共享配置，**仅 Git**，SVN 不上传 |
 | `AGENTS.md` `.gitignore` `.git/` | ✅ | ❌ | Git 工具链配置 |
 | `doc/` 项目文档（设计说明、优化方案等） | ✅ | ❌ | 通用约定：只上 Git，不上 SVN |
 | `ref_doc/` / `ref_docs/` 参考资料 | ❌ | ❌ | 本地引用，两侧都不上 |
-| `EWARM/*/Obj/` `EWARM/*/BrowseInfo/` `EWARM/*/Exe/` `EWARM/*/List/` `.pbi/.pbw/.pbd/.browse` IAR 中间产物 | ❌ | ❌ | IAR 重新生成 |
+| `EWARM/<target>/Obj/` `BrowseInfo/` `Exe/` `List/` `.pbi/.pbw/.pbd/.browse` IAR 中间产物 | ❌ | ❌ | IAR 重新生成；SVN 嵌套目录需在对应父目录设 ignore |
 | `Debug/` `Release/` `*.o` `*.d` `*.su` `*.elf` `*.map` `*.list` *（STM32CubeIDE+GCC 项目）* | ❌ | ❌ | GCC 重新生成 |
 | `.qoder/` `.lingma/` `.uv-cache/` `tmp/` `~$*` 本地噪音 | ❌ | ❌ | 工具临时状态 / Office 锁 |
-| `.trellis/workspace/*/journal-*.md` 个人 journal | ❌ | ❌ | 单开发者本地状态 |
+| `.trellis/workspace/*/journal-*.md` `.trellis/.runtime/` `.trellis/.backup-*/` | ❌ | ❌ | 单开发者本地状态 |
 
 ### 1.2 配置文件
 
 - 项目根的 `.gitignore` 必须声明上述 Git 端 ignore 规则
 - 项目对应的 SVN 目录必须设 `svn:ignore` 属性，内容同步规则
 - `.trellis/.gitignore` 已由 trellis init 默认声明 Trellis 内部 ignore
+- SVN `svn:ignore` 按目录 basename 生效；根目录属性不能覆盖所有嵌套 IAR 产物，必要时在 `EWARM/<target>/` 等父目录单独设置
 
 ### 1.3 跨轨同步纪律
 
-- **不要**在 `.gitignore` 里 ignore AI/Trellis 路径（这些路径就是 Git 该跟踪的内容）
+- **不要**在 `.gitignore` 里 ignore `.trellis/spec/`、`.trellis/tasks/` 等共享上下文；只 ignore `.trellis/workspace/*/journal-*.md`、`.trellis/.runtime/`、`.trellis/.backup-*/` 等本地状态
 - **不要**在 SVN 端 add 任何 AI/Trellis 路径
-- Git 和 SVN 提交节奏可以**有意不同步** —— Git 频繁、SVN 节制（按公司里程碑）
+- Git 和 SVN 提交节奏可以**有意不同步** —— Git 频繁、SVN 节制（按团队或项目里程碑）
 
 ---
 
@@ -43,7 +44,7 @@
 
 ### 2.1 版本宏定义
 
-新项目应当在 `User/App/System/define.h`（IAR 主流项目惯例）或 `User/App/Inc/define.h`（例外项目惯例）定义以下版本宏：
+新项目应当按项目惯例在 `User/App/System/define.h`、`User/App/Inc/define.h` 或等价版本头中定义以下版本宏：
 
 | 宏 | 类型 | 含义 | 何时 bump |
 |---|---|---|---|
@@ -51,7 +52,7 @@
 | `SOFTWARE_VERSION_DATE` / `VERSION_DATE` | 字符串 `"YYYYMMDD"` | 当前版本的发布日期 | 跟版本号同步 bump |
 | `ALGO_VERSION` *（可选）* | 字符串 `"vX.Y"` | 算法核心版本 | **仅算法核心变更**（拟合公式、阈值算法、核心处理算法） |
 
-> 命名按项目惯例：IAR 主流项目用 `SOFTWARE_VERSION` / `SOFTWARE_VERSION_DATE`，部分 STM32CubeIDE 项目用 `VERSION` / `VERSION_DATE`。**全项目内保持一致即可**，不要混用。
+> 命名按项目惯例：常见 IAR-style 项目用 `SOFTWARE_VERSION` / `SOFTWARE_VERSION_DATE`，部分 STM32CubeIDE/GCC-style 项目用 `VERSION` / `VERSION_DATE`。**全项目内保持一致即可**，不要混用。
 
 ### 2.2 版本号语义层次
 
@@ -64,7 +65,7 @@
 如果一天里有多次"改固件行为"的 commit：
 
 - 日期戳保持当天日期不变
-- 整体版本递增小版本：`v1.00.06` → `v1.00.07` → `v1.00.08`（IAR 主流项目惯用两位小数）
+- 整体版本递增小版本：`v1.00.06` → `v1.00.07` → `v1.00.08`（或采用项目既有语义版本格式）
 
 ### 2.4 仅文档 / Trellis / 重构（不改行为）的 commit
 
@@ -100,9 +101,9 @@ refactor: extract distance helper （行为不变）
 
 `type` 取值：`feat` `fix` `refactor` `chore` `docs` `test` `perf` `build` `style`
 
-`scope` 可选，按模块：`uart` `dma` `i2c` `lvgl` `fatfs` `bsp` `bootloader` `flash` `trellis` `doc`
+`scope` 可选，按模块：`uart` `dma` `i2c` `ui` `storage` `bsp` `bootloader` `flash` `trellis` `doc`
 
-### 3.2 正文模板（双语结构化 —— 公司标准）
+### 3.2 正文模板（双语结构化）
 
 ```text
 版本号：v1.00.02
@@ -147,7 +148,18 @@ iarbuild <项目>.ewp -make Debug     # 增量编译
 # - .ewp 文件路径成员校验（确认新增 .c 被加入工程）
 ```
 
-#### STM32CubeIDE+GCC 编译验证命令参考（少数项目）
+#### STM32CubeIDE+GCC 编译验证命令参考
+
+Windows PowerShell:
+
+```powershell
+# 在 Debug/ 目录下
+$env:PATH = "<stm32cube gcc + make plugin path>;$env:PATH"
+make -j8 all                          # 完整 build
+make clean                            # 清理
+```
+
+Bash:
 
 ```bash
 # 在 Debug/ 目录下
@@ -173,11 +185,27 @@ make clean                            # 清理
 
 ### 4.1 触发条件
 
-**只在用户明确说出 "提交 SVN" / "上传 SVN" / "SVN 提交"** 才动 SVN。SVN 提交是**公司级永久记录**，submitted 后无法编辑，因此不可隐式触发。
+**只在用户明确说出 "提交 SVN" / "上传 SVN" / "SVN 提交"** 才动 SVN。SVN 提交通常是团队或项目主线记录，submitted 后不易编辑，因此不可隐式触发。
 
 ### 4.2 提交前必做事项
 
 1. **比较 SVN 基线 vs 本地基线**（Git 和 SVN 可能有意不同步，SVN 落后多个版本是常态）：
+
+   Windows PowerShell:
+
+   ```powershell
+   # SVN 端基线
+   svn cat -r HEAD User/App/System/define.h | Select-String -Pattern "SOFTWARE_VERSION|VERSION_DATE"
+
+   # 本地基线
+   Select-String -Path User/App/System/define.h -Pattern "SOFTWARE_VERSION|VERSION_DATE"
+
+   # Git 端基线（如果有 git tag 对应每个 SVN release）
+   git log --oneline --reverse <svn-baseline>..HEAD
+   git diff --name-status <svn-baseline>..HEAD
+   ```
+
+   Bash:
 
    ```bash
    # SVN 端基线
@@ -208,7 +236,7 @@ make clean                            # 清理
 ### 4.3 SVN log 模板（**中文 + 版本前缀**，不含英文）
 
 ```text
-版本：<项目代号>:v1.00.18_20260527
+版本：<项目代号>:v1.00.18_{{TODAY_YYYYMMDD}}
 简述：xxx 功能完成 / xxx 问题修复
 1. 增加 xxx 模块
 2. 修复 xxx bug
@@ -216,7 +244,7 @@ make clean                            # 清理
 ```
 
 - **不要**包含 `Verification`、`English`、`Summary`、`Key Changes` 等 Git 专用字段
-- `版本：` 行必须含产品名前缀（`<项目代号>` 替换成本项目 SVN 标识，如 `BW2024-XAYF-023_MCU-MAIN` / `BW-STS130_S9706`），格式严格为 `<项目代号>:vX.YY.ZZ_YYYYMMDD`
+- `版本：` 行必须含产品名前缀（`<项目代号>` 替换成本项目 SVN 标识），格式严格为 `<项目代号>:vX.YY.ZZ_YYYYMMDD`
 - `简述：` 一句话整体描述
 - 编号变更项使用阿拉伯数字 + 中文
 
@@ -224,12 +252,31 @@ make clean                            # 清理
 
 1. **写完 SVN log 后，先把完整内容打印给用户，等待显式确认**
 2. 用 UTF-8 no-BOM 临时文件保存 log：
+
+   Windows PowerShell:
+
+   ```powershell
+   $logPath = Join-Path $env:TEMP "svn_log.txt"
+   Set-Content -LiteralPath $logPath -Value $svnLogText -Encoding utf8NoBOM
+   svn commit <paths> --file $logPath --encoding UTF-8
+   ```
+
+   Bash:
+
    ```bash
    # 例：写到 /tmp/svn_log.txt（UTF-8 no-BOM）
    svn commit <paths> --file /tmp/svn_log.txt --encoding UTF-8
    ```
 3. **不要**用 `svn commit -m "..."` 命令行直接传中文（容易乱码）
 4. commit 后立即验证 log 不乱码：
+   Windows PowerShell:
+
+   ```powershell
+   svn log -r <REV> --xml | Select-String -Pattern "<msg>" -Context 0,20
+   ```
+
+   Bash:
+
    ```bash
    svn log -r <REV> --xml | grep -A 20 "<msg>"
    ```
@@ -248,7 +295,7 @@ make clean                            # 清理
 | 用户说的话 | AI 助手该做的事 |
 |---|---|
 | "提交 git" / "提交 Git" / "git 提交" | Git 端 commit + push 到 origin/main |
-| "提交远程" | 同上（默认指 Git，因为 SVN 是公司主线，提交需要更显式） |
+| "提交远程" | 同上（默认指 Git，因为 SVN 主线提交需要更显式） |
 | "提交 SVN" / "上传 SVN" / "SVN 提交" | 走 §4 SVN 流程（先打印 log → 等用户确认 → commit） |
 | "本地 commit" / "commit 一下" | Git 端 commit，**不 push** |
 | 没说提交两个字 | 不要主动 commit，等用户开口 |
