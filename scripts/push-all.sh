@@ -62,9 +62,10 @@ echo ""
 for remote in "${FAILED[@]}"; do
   case "$remote" in
     origin)
+      origin_url="$(git remote get-url origin 2>/dev/null || echo '<origin URL>')"
       echo "  [origin / 公司 Gitea]"
       echo "    - 检查公司 VPN / 内网连接"
-      echo "    - 确认 <origin URL> 可达：curl -I http://<origin URL>/"
+      echo "    - 确认 origin 可达：curl -I \"$origin_url\""
       echo "    - 修好网络后重试：git push origin $BRANCH"
       ;;
     gitee)

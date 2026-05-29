@@ -4,6 +4,10 @@
 >
 > 支持按项目实际选择 IAR Embedded Workbench for Arm、STM32CubeIDE+GCC 或其他 MCU 工具链；spec 内仅保留通用差异提示。
 
+> **谁应该读这个文档？**
+> - 你要在**新 MCU 项目里用这个模板** → 看下面「使用方法」一节，跑两步命令就能用
+> - 你要**接手维护本仓库** → 跳到 [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md)，顶部"Supervisor 模式"是新人入门
+
 ## Registry 地址
 
 示例里统一使用 `<registry-url>` 占位。当前 registry 地址以团队通知或脚本配置为准，不在模板正文里写死，避免服务迁移后批量失效。

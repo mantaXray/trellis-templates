@@ -112,6 +112,7 @@ review 一下我刚改的，validator 过了没？还有哪里要补？
 | 装 git pre-push hook（每次 push 前自动跑 validator） | 让 AI 装："帮我装 pre-push hook" |
 | 配 Clash 代理给 git（GitHub 推得上去） | 让 AI 配："帮我配 git 代理走 Clash 7897"，本机已配 |
 | 加 `github` / `gitee` remote | 已经配好（见 `git remote -v`） |
+| 在三个 remote 配 branch protection（强制 PR + CI 绿才能合并） | 按 [`branch-protection-setup.md`](branch-protection-setup.md) 在网页上操作，AI 干不了这件事 |
 
 ---
 

@@ -317,6 +317,10 @@ for name in required_template_files:
 if not (REPO_ROOT / "docs" / "MAINTENANCE.md").exists():
     fail("docs/MAINTENANCE.md is missing (maintainer SOP)")
 
+# Branch protection setup guide for the three remotes.
+if not (REPO_ROOT / "docs" / "branch-protection-setup.md").exists():
+    fail("docs/branch-protection-setup.md is missing (remote branch protection guide)")
+
 
 def load_template(name: str) -> str:
     return (TEMPLATES_DIR / name).read_text(encoding="utf-8")
