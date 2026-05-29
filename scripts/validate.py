@@ -214,6 +214,10 @@ assert_contains(checklist, r"journal-\*\.md", "bootstrap checklist should docume
 
 assert_not_contains(push_all, r"pr create[\s\S]{0,300}--fill",
                     "push-all.sh should not use gh pr create --fill with a remote-only PR branch")
+assert_contains(push_all, r"GIT_TERMINAL_PROMPT=0",
+                "push-all.sh should disable interactive git prompts during automation")
+assert_contains(push_all, r"GCM_INTERACTIVE=never",
+                "push-all.sh should keep Git Credential Manager non-interactive during automation")
 
 # .gitignore order check inside the checklist
 m = re.search(r"```gitignore\s*(.*?)```", checklist, flags=re.DOTALL)

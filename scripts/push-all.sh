@@ -27,6 +27,10 @@ GITHUB_REMOTE=github
 GITHUB_REPO=mantaXray/trellis-mcu-templates
 FAILED=()
 
+# 自动化脚本不能卡在交互式凭据提示；失败后进入总结区给修复建议。
+export GIT_TERMINAL_PROMPT=0
+export GCM_INTERACTIVE=never
+
 # ----- 定位 gh CLI（PATH 可能没刷新认不到全局命令） -----
 GH_BIN=""
 if command -v gh >/dev/null 2>&1; then
