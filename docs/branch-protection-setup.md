@@ -19,22 +19,49 @@
 
 ## GitHub
 
-1. 打开 `https://github.com/mantaXray/trellis-templates/settings/branches`
-2. 点击 "Add branch protection rule"
-3. **Branch name pattern**: `main`
-4. 勾选以下规则：
-   - ✅ **Require a pull request before merging**
-     - ✅ Require approvals → 1（如果只有你 owner，也建议保留，强制自己走 PR 习惯）
-     - ✅ Dismiss stale pull request approvals when new commits are pushed
-   - ✅ **Require status checks to pass before merging**
-     - ✅ Require branches to be up to date before merging
-     - 在搜索框输入 `validate`，勾选 GitHub Actions 那个 workflow
-   - ✅ **Do not allow bypassing the above settings**（这条很关键，否则 admin 默认可绕过）
-   - ✅ **Restrict deletions**
-   - ✅ **Allow force pushes**: 取消勾选（默认不允许）
-5. 点击 "Create" / "Save changes"
+GitHub 现在有两套机制：
 
-配完后，验证：`git push origin main` 直接推会被服务端拒绝，提示要走 PR。
+- **Repository Rulesets**（2023 年推出，**推荐**）：颗粒度更细、能跨分支模式复用、bypass 控制更精细、审计更完整
+- **Branch protection rules**（老版，向后兼容）：传统单分支规则
+
+对单仓库单 main 场景功能等价。新仓库建议直接用 Rulesets，跟上 GitHub 演进方向。两套**只配一套**，否则规则叠加容易乱。
+
+### 推荐路径：用 Rulesets
+
+1. 打开 `https://github.com/mantaXray/trellis-templates/settings/rules`（或仓库页 → Settings → Rules → Rulesets）
+2. 点击右上 **New ruleset** → **New branch ruleset**
+3. **Ruleset name**: `main protection`（任意，自己看得懂就行）
+4. **Enforcement status**: `Active`
+5. **Bypass list**: 留空（即使 owner 也走 PR；想给自己留 emergency 通道可以加上自己并选 "For pull requests only"）
+6. **Target branches** 区段：
+   - 点 **Add target** → 选 **Include default branch**（自动覆盖 main，未来改默认分支也跟着走）
+7. **Branch rules** 区段勾选：
+   - ✅ **Restrict deletions**
+   - ✅ **Block force pushes**
+   - ✅ **Require a pull request before merging**
+     - Required approvals: `1`（仅 owner 时也建议保留，强制自己走 PR 流程）
+     - ✅ Dismiss stale pull request approvals when new commits are pushed
+   - ✅ **Require status checks to pass**
+     - 点 **Add checks** → 搜 `validate` → 选 GitHub Actions 的 `validate` workflow
+     - ✅ Require branches to be up to date before merging
+   - 可选：✅ **Require linear history**（禁止 merge commit，只允许 rebase/squash）
+   - 可选：✅ **Require signed commits**（如果团队都配了 GPG/SSH 签名）
+8. 点击底部 **Create**
+
+### 兼容路径：旧版 Branch protection rules
+
+只有在你已经习惯旧机制或者需要某些 Rulesets 还没支持的特殊行为时才用：
+
+1. 打开 `https://github.com/mantaXray/trellis-templates/settings/branches`
+2. 点击 **Add branch protection rule**
+3. **Branch name pattern**: `main`
+4. 勾选：
+   - ✅ Require a pull request before merging → Require approvals: 1
+   - ✅ Require status checks to pass → 选 `validate`
+   - ✅ Do not allow bypassing the above settings（**这条很关键**，否则 admin 默认可绕过）
+   - ✅ Restrict deletions
+   - 取消 Allow force pushes
+5. 保存
 
 ---
 
