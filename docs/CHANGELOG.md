@@ -4,6 +4,7 @@
 
 ## 2026-05-29
 
+- FIX: `docs/branch-protection-setup.md` GitHub 章节再次调整：实测 GitHub 限制 Rulesets 在 free personal + private 仓库里不可用（必须 Pro 付费或 Team Organization）。当前推荐路径改回 Branch protection rules（老版，free 可用）；Rulesets 降为"仓库 public 或账户升级后的迁移路径"。
 - FIX: `docs/branch-protection-setup.md` GitHub 章节改以 **Repository Rulesets**（2023 新版）为推荐路径，旧版 Branch protection rules 降为"兼容路径"。Rulesets 颗粒度更细、跨分支可复用、bypass 控制更精细，是 GitHub 当前演进方向。
 - ADD: README.md 顶部加「谁应该读这个文档？」3 行分流块，把下游用户和接手维护者分开引导。下游用户继续看「使用方法」，新维护者直接跳到 `docs/MAINTENANCE.md`。
 - ADD: `docs/branch-protection-setup.md` 详细说明 GitHub / Gitee / 公司 Gitea 三个 remote 各自怎么配 branch protection（强制 PR + CI 绿才能合并）。MAINTENANCE.md S.6 新增一行指向。
