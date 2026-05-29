@@ -102,6 +102,7 @@ reuse_guide = read_text("specs/mcu-stm32-base/guides/firmware-reuse-guide.md")
 task_process = read_text("specs/mcu-stm32-base/guides/task-process.md")
 feedback_loop = read_text("docs/pitfall-feedback-loop.md")
 external_kb = read_text("docs/external-knowledge-base.md")
+push_all = read_text("scripts/push-all.sh")
 
 generic_template_text = "\n".join([
     readme, index_text, skill, checklist,
@@ -205,6 +206,26 @@ assert_contains(checklist, r"svn:ignore.*basename", "bootstrap checklist should 
 assert_contains(checklist, "session_auto_commit", "bootstrap checklist should cover Trellis config session_auto_commit")
 assert_contains(checklist, "TASK_JSON_PATH", "bootstrap checklist should document generic task hook environment")
 assert_contains(checklist, r"journal-\*\.md", "bootstrap checklist should document local journal ignore rules")
+
+
+# ---------------------------------------------------------------------------
+# 6. Automation script checks
+# ---------------------------------------------------------------------------
+
+assert_not_contains(push_all, r"pr create[\s\S]{0,300}--fill",
+                    "push-all.sh should not use gh pr create --fill with a remote-only PR branch")
+assert_contains(push_all, r"GIT_TERMINAL_PROMPT=0",
+                "push-all.sh should disable interactive git prompts during automation")
+assert_contains(push_all, r"GCM_INTERACTIVE=never",
+                "push-all.sh should keep Git Credential Manager non-interactive during automation")
+assert_contains(push_all, r"PUSH_TIMEOUT_SECONDS",
+                "push-all.sh should bound git push duration so one remote cannot block the workflow")
+assert_contains(push_all, r"timeout \"\$PUSH_TIMEOUT_SECONDS\" git push",
+                "push-all.sh should run git push through timeout when available")
+assert_contains(push_all, r"wait_for_pr_checks_to_appear",
+                "push-all.sh should wait for GitHub checks to be registered before watching them")
+assert_contains(push_all, r"CHECK_DISCOVERY_TIMEOUT_SECONDS",
+                "push-all.sh should bound how long it waits for GitHub checks to appear")
 
 # .gitignore order check inside the checklist
 m = re.search(r"```gitignore\s*(.*?)```", checklist, flags=re.DOTALL)
