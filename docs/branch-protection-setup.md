@@ -2,7 +2,9 @@
 
 > 给希望"接手维护本仓库"的人保留一道审核闸门。Owner（你自己）也建议走 PR 流程，避免直接推 main 时绕过 CI。
 >
-> 三个 remote（origin/gitee/github）需要分别配。最重要的是 GitHub（如果未来开源），其次是公司 Gitea（多人协作场景）。Gitee 通常作为镜像，强制规则可选。
+> 优先级：**公司 Gitea (origin) > Gitee > GitHub**。Gitea 是团队真实协作的主战场，必须配；Gitee/GitHub 是个人镜像，按需配。GitHub 在 free personal + private 账户下**服务端保护机制基本不可用**（详见 §GitHub 一节），可以直接跳过它的服务端保护。
+>
+> 注意服务端保护被绕过时，**本地 pre-push hook + 个人讨厌 force push 的习惯**仍然是有效的最后一道防线。
 
 ## 推荐的保护规则
 
@@ -17,45 +19,66 @@
 
 ---
 
-## GitHub
+## 公司 Gitea (origin)  —— 优先级最高，必须配
 
-GitHub 有两套机制，但**在 free personal account 的 private 仓库里能用的只有一套**：
+团队真实协作发生在这里，没有 free/paid 限制，所有规则都能用。
 
-| 机制 | 推出时间 | private + free personal | private + Pro/Team Org | public |
-|---|---|---|---|---|
-| **Branch protection rules**（老版） | 老 | ✅ 可用 | ✅ 可用 | ✅ 可用 |
-| **Repository Rulesets**（新版） | 2023 | ❌ **不可用** | ✅ 可用 | ✅ 可用 |
-
-实测 free personal + private 仓库打开 Rulesets 页面会被提示："To access rulesets in a private repository, you'll need to move it to a GitHub Team organization account."
-
-**因此本仓库（private + free personal）当前推荐路径是 Branch protection rules**。未来仓库变 public 或升 Pro / 转 Team Org，再迁移到 Rulesets。
-
-### 当前推荐路径：Branch protection rules（free 可用）
-
-1. 打开 `https://github.com/mantaXray/trellis-templates/settings/branches`
-2. 点击 **Add branch protection rule**
-3. **Branch name pattern**: `main`
+1. 打开仓库 → **Settings** → **Branches**
+2. **Protected Branches** 部分，点击 **Add Rule**
+3. **Branch Name**: `main`
 4. 勾选：
-   - ✅ **Require a pull request before merging**
-     - Required approvals: `1`（仅 owner 时也建议保留，强制自己走 PR 习惯）
-     - ✅ Dismiss stale pull request approvals when new commits are pushed
-   - ✅ **Require status checks to pass before merging**
-     - ✅ Require branches to be up to date before merging
-     - 在搜索框输入 `validate`，勾选 GitHub Actions 那个 workflow
-   - ✅ **Do not allow bypassing the above settings**（**这条很关键**，否则 admin 默认可绕过）
-   - ✅ **Restrict deletions**
-   - 取消勾选 **Allow force pushes**（默认就是不勾）
-5. 点击 **Create** / **Save changes**
+   - ✅ **Enable Push Whitelist** → 只允许 owner / specific users 直接推
+   - ✅ **Enable Merge Whitelist** → 同上（控制谁能合并 PR）
+   - ✅ **Require approval from N reviewers**（按团队规模填，单人或两人时填 1）
+   - ✅ **Block on official review requests**
+   - ✅ **Block on outdated branch**
+5. 保存
 
-### 未来升级路径：Repository Rulesets（仓库 public 或账户升级后再做）
+> Gitea 1.19+ 也支持 Gitea Actions 做 status check；如果公司 Gitea 开了 Actions 并跑了 validator workflow，可在 **Status Check Patterns** 里加 `validate`。如果没开 Actions，靠人工 review 也够。
 
-满足以下任一条件时可以迁移到 Rulesets：
+---
 
-- 仓库改为 public
-- 升级到 GitHub Pro（个人付费版，private 仓库支持 Rulesets）
-- 仓库移到 GitHub Team Organization 账户
+## Gitee  —— 可选，镜像保护
 
-迁移步骤：
+1. 打开仓库 → **管理** → **分支管理**
+2. 找到 `main` 分支，点击 **保护**
+3. 设置：
+   - ✅ **仅 Owner / Admin 可推送**
+   - ✅ **不允许强推（force push）**
+   - ✅ **不允许删除**
+4. 如果团队加了协作者，再去「PR 设置」要求 N 个 approve
+
+> Gitee Actions 的状态检查可能需要单独配置。本仓库 CI 主战场在 GitHub Actions，这里跳过 status check，靠人工 review 即可。
+
+---
+
+## GitHub  —— free personal + private 实质无服务端保护
+
+### 现实状况
+
+GitHub 把两套保护机制都对 **free personal account + private 仓库**做了限制：
+
+| 机制 | private + free personal | private + Pro / Team Org | public + free |
+|---|---|---|---|
+| **Branch protection rules**（老版） | ⚠️ 可创建但**不强制执行** | ✅ 强制 | ✅ 强制 |
+| **Repository Rulesets**（新版） | ❌ 完全不可用 | ✅ 强制 | ✅ 强制 |
+
+GitHub 自己的提示原话：
+
+- Rulesets：*"To access rulesets in a private repository, you'll need to move it to a GitHub Team organization account."*
+- Branch protection：*"Your protected branch rules for your branch won't be enforced on this private repository until you move to a GitHub Team or Enterprise organization account."*
+
+**等价于：本仓库当前状态下 GitHub 没有服务端保护手段**。
+
+### 你的三个选择
+
+1. **接受现状（推荐）**：把 GitHub 当镜像，主战场是 Gitea，本地 pre-push hook + `bash scripts/push-all.sh` 已经能挡住所有意外。GitHub 即使有人直接推也只是把镜像污染，影响不大。
+2. **付费**：GitHub Pro 个人版 $4/月 解锁 personal private 仓库的保护（Rulesets 也能用）；或者把仓库转移到 GitHub Team Organization（更适合团队协作但更贵）。
+3. **改 public**：保护规则立刻生效。Git 历史里的内网 IP 已经清干净（commit `dda8492`/`9b75081` 之后的版本），技术上没风险。但要先想清楚是否真的要把模板开源。
+
+### 如果走选项 2 或 3，配置步骤
+
+**升级到 public、Pro、或 Team Org 后**，推荐用 Rulesets：
 
 1. 打开 `https://github.com/mantaXray/trellis-templates/settings/rules`
 2. 点击 **New ruleset** → **New branch ruleset**
@@ -70,38 +93,8 @@ GitHub 有两套机制，但**在 free personal account 的 private 仓库里能
    - ✅ Require status checks to pass → Add checks: `validate`，勾选 Require branches to be up to date
    - 可选：Require linear history / Require signed commits
 8. **Create**
-9. 迁移完成后，到 `settings/branches` 把老的 Branch protection rule 删掉，避免两套规则叠加冲突
 
----
-
-## Gitee
-
-1. 打开仓库 → **管理** → **分支管理**
-2. 找到 `main` 分支，点击 **保护**
-3. 设置：
-   - ✅ **仅 Owner / Admin 可推送**
-   - ✅ **不允许强推（force push）**
-   - ✅ **不允许删除**
-4. 如果团队加了协作者，再去「PR 设置」要求 N 个 approve
-
-> ⚠️ Gitee Actions 的状态检查可能需要单独配置；如果项目不依赖 Gitee CI（本仓库 CI 主要在 GitHub），可以跳过 status check 要求，只靠人工 review。
-
----
-
-## 公司 Gitea (origin)
-
-1. 打开仓库 → **Settings** → **Branches**
-2. **Protected Branches** 部分，点击 **Add Rule**
-3. **Branch Name**: `main`
-4. 勾选：
-   - ✅ **Enable Push Whitelist** → 只允许 owner / specific users
-   - ✅ **Enable Merge Whitelist** → 同上
-   - ✅ **Require approval from N reviewers**（按团队规模填，1~2 较常见）
-   - ✅ **Block on official review requests**
-   - ✅ **Block on outdated branch**
-5. 保存
-
-> Gitea 1.19+ 也支持 Gitea Actions 做 status check；如果公司 Gitea 开了 Actions 并跑了 validator，可在 **Status Check Patterns** 里加 `validate`。
+如果不想升级 Pro/Team Org 但仓库已 public，老版 Branch protection rules 也能用（`settings/branches` → Add rule），步骤类似。
 
 ---
 
@@ -115,21 +108,23 @@ echo "" >> README.md
 git add README.md && git commit -m "test: verify branch protection"
 
 # 2. 试着直接推
-git push origin main
-# 期望：服务端拒绝，提示需要 PR
+git push origin main         # Gitea 应该被拒绝
+git push gitee main          # Gitee 应该被拒绝
+git push github main         # GitHub（free + private）会成功——这是 GitHub 限制，不是你配错
 
 # 3. 撤销刚才的 test commit
 git reset --hard HEAD~1
 ```
 
-如果三个 remote 中任何一个能直接推上去，说明那个 remote 的保护没生效。
+如果 Gitea 或 Gitee 也能直接推上去，说明那个 remote 的保护没生效，回去检查规则。GitHub 在 free + private 状态下推上去是正常的（前面解释过了）。
 
 ---
 
 ## 紧急绕过
 
 如果出现真正的紧急情况（CI 跑不通且必须立刻 push），可以临时关掉 branch protection：
-- GitHub: Settings → Branches → 该规则旁边 "Disable"，处理完立刻 "Enable"
-- Gitee/Gitea: 类似操作
+- Gitea: Settings → Branches → 该规则旁边 **Disable** / 删除，处理完立刻恢复
+- Gitee: 类似操作
+- GitHub: 它本来就不强制，不用处理
 
-**不要养成 `--no-verify` 习惯**——本地 pre-push hook 可以跳过，但服务端 branch protection 是最后一道防线。
+**不要养成 `--no-verify` 习惯**——本地 pre-push hook 可以跳过，但服务端 branch protection 是最后一道防线（在它真能强制的 remote 上）。
