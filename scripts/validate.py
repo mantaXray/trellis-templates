@@ -102,6 +102,7 @@ reuse_guide = read_text("specs/mcu-stm32-base/guides/firmware-reuse-guide.md")
 task_process = read_text("specs/mcu-stm32-base/guides/task-process.md")
 feedback_loop = read_text("docs/pitfall-feedback-loop.md")
 external_kb = read_text("docs/external-knowledge-base.md")
+push_all = read_text("scripts/push-all.sh")
 
 generic_template_text = "\n".join([
     readme, index_text, skill, checklist,
@@ -205,6 +206,14 @@ assert_contains(checklist, r"svn:ignore.*basename", "bootstrap checklist should 
 assert_contains(checklist, "session_auto_commit", "bootstrap checklist should cover Trellis config session_auto_commit")
 assert_contains(checklist, "TASK_JSON_PATH", "bootstrap checklist should document generic task hook environment")
 assert_contains(checklist, r"journal-\*\.md", "bootstrap checklist should document local journal ignore rules")
+
+
+# ---------------------------------------------------------------------------
+# 6. Automation script checks
+# ---------------------------------------------------------------------------
+
+assert_not_contains(push_all, r"pr create[\s\S]{0,300}--fill",
+                    "push-all.sh should not use gh pr create --fill with a remote-only PR branch")
 
 # .gitignore order check inside the checklist
 m = re.search(r"```gitignore\s*(.*?)```", checklist, flags=re.DOTALL)

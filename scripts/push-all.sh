@@ -24,6 +24,7 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 SHA="$(git rev-parse --short HEAD)"
 DIRECT_REMOTES=(origin gitee)
 GITHUB_REMOTE=github
+GITHUB_REPO=mantaXray/trellis-mcu-templates
 FAILED=()
 
 # ----- 定位 gh CLI（PATH 可能没刷新认不到全局命令） -----
@@ -100,7 +101,7 @@ else
         echo "    [github] gh CLI 不可用或未认证 → 切手动 PR 模式"
         echo ""
         echo "    👉 创建 PR 并 merge："
-        echo "       https://github.com/mantaXray/trellis-templates/pull/new/$PR_BRANCH"
+        echo "       https://github.com/$GITHUB_REPO/pull/new/$PR_BRANCH"
         echo ""
         echo "    merge 后跑下面命令同步本地和其他 remote："
         echo "       git fetch $GITHUB_REMOTE && git reset --hard $GITHUB_REMOTE/main"
@@ -111,24 +112,36 @@ else
       else
         # gh 全自动流程
         echo "    [github] 创建 PR..."
-        pr_url=$("$GH_BIN" pr create \
+        PR_TITLE="$(git log -1 --pretty=%s)"
+        PR_BODY="$(cat <<EOF
+Automated PR from scripts/push-all.sh.
+
+Source commit: $local_head
+EOF
+)"
+        pr_create_output=$("$GH_BIN" pr create \
+          --repo "$GITHUB_REPO" \
           --base "$BRANCH" \
           --head "$PR_BRANCH" \
-          --fill 2>&1 | grep -oE 'https://github.com/[^[:space:]]*' | tail -1)
-        if [ -z "$pr_url" ]; then
+          --title "$PR_TITLE" \
+          --body "$PR_BODY" 2>&1)
+        pr_create_status=$?
+        pr_url=$(printf '%s\n' "$pr_create_output" | grep -oE 'https://github.com/[^[:space:]]*' | tail -1 || true)
+        if [ "$pr_create_status" -ne 0 ] || [ -z "$pr_url" ]; then
           echo "    [github] gh pr create 失败"
+          printf '%s\n' "$pr_create_output" | sed 's/^/      /'
           FAILED+=("$GITHUB_REMOTE")
         else
           echo "    [github] PR: $pr_url"
           echo "    [github] 等 CI（进度直出，不再静默）..."
           # 不用 --required：Rulesets 没标 required check 时会秒退假装通过
-          if ! "$GH_BIN" pr checks "$pr_url" --watch --fail-fast; then
+          if ! "$GH_BIN" pr checks "$pr_url" --repo "$GITHUB_REPO" --watch --fail-fast; then
             echo "    [github] CI 未通过。手动处理：$pr_url"
             FAILED+=("$GITHUB_REMOTE")
           else
             echo "    [github] CI 通过 ✓"
             echo "    [github] 合并 PR (admin self-merge)..."
-            if ! "$GH_BIN" pr merge "$pr_url" --merge --admin --delete-branch; then
+            if ! "$GH_BIN" pr merge "$pr_url" --repo "$GITHUB_REPO" --merge --admin --delete-branch; then
               echo "    [github] merge 失败。手动处理：$pr_url"
               FAILED+=("$GITHUB_REMOTE")
             else
